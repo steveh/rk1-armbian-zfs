@@ -3,7 +3,7 @@
 Builds an Armbian image for the Turing Pi 2 RK1 module:
 
 - Debian Trixie userspace, minimal (server, no desktop).
-- Mainline kernel (`BRANCH=current`) with Armbian's RK3588 patches.
+- Rockchip BSP kernel (`BRANCH=vendor`, 6.1.x). Required because OpenZFS 2.3.x (shipped by Trixie) supports kernels up to 6.14 only; mainline `BRANCH=current` on RK3588 currently delivers 6.18.
 - ZFS DKMS module + userspace, built into the image.
 - First boot from eMMC runs cloud-init, which migrates the system to NVMe with a custom partition layout (ext4 `/boot`, ext4 `/`, ZFS pool on `/srv`), writes U-Boot to the NVMe, then reboots.
 - eMMC is left untouched as a rescue: re-select eMMC in the BMC to boot the original image. If you boot eMMC again, cloud-init re-runs and re-migrates (idempotent).
@@ -65,10 +65,16 @@ eMMC retains the original cloud-init image. To return to it:
 
 ## Branch choice
 
-`BRANCH=current` (mainline LTS, e.g. 6.12) is used because:
+`BRANCH=vendor` — Rockchip BSP kernel 6.1 (`rk-6.1-rkr5.1`, packaged by Armbian from `armbian/linux-rockchip`).
 
-- Trixie ships OpenZFS 2.3.x, which dropped 5.10 support; mainline 6.12 pairs cleanly.
-- This is a server use case — no NPU/MPP/VPU dependency on Rockchip BSP.
-- Closer to "stock Debian".
+Why not `current`? On Armbian `v25.11`, RK3588 `current` ships a 6.18 mainline kernel. OpenZFS 2.3.2 (Trixie's version) refuses to build on kernels newer than 6.14:
 
-If a peripheral does not work on `current`, switch to `BRANCH=vendor` in `userpatches/config-rk1.conf` and change `linux-u-boot-current-turing-rk1` → `linux-u-boot-vendor-turing-rk1` in `rootfs-to.sh`.
+```
+configure: error:
+    *** Cannot build against kernel version 6.18.10-current-rockchip64.
+    *** The maximum supported kernel version is 6.14.
+```
+
+`vendor` 6.1 falls inside the supported range, has full RK3588 hardware support, and is the practical pairing with ZFS on Trixie today. To switch when a future Armbian release ships kernel ≤6.14 on `current` (or OpenZFS catches up), change `BRANCH` in `userpatches/config-rk1.conf` and the `UBOOT_DIR` package name in `userpatches/overlay/boot/rootfs-to.sh`.
+
+Serial console: vendor branch uses `ttyS9 @ 115200` (current/edge use `ttyS0`). The board config (`config/boards/turing-rk1.csc` in armbian/build) sets this automatically.

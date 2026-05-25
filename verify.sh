@@ -62,8 +62,8 @@ check() {
 
 echo
 echo "== 1. u-boot package present =="
-UBOOT_PKG_DIR="$MNT/usr/lib/linux-u-boot-current-turing-rk1"
-check "linux-u-boot-current-turing-rk1 installed" \
+UBOOT_PKG_DIR="$MNT/usr/lib/linux-u-boot-vendor-turing-rk1"
+check "linux-u-boot-vendor-turing-rk1 installed" \
       "[ -d '$UBOOT_PKG_DIR' ]"
 check "u-boot-rockchip.bin present" \
       "[ -f '$UBOOT_PKG_DIR/u-boot-rockchip.bin' ]"

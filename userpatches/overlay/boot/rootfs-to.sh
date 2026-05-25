@@ -27,7 +27,7 @@ ROOT_OPTS=relatime
 BOOT_OPTS="relatime,x-systemd.automount,x-systemd.idle-timeout=31"
 
 # u-boot package: must match BRANCH= used at build time
-UBOOT_DIR=/usr/lib/linux-u-boot-current-turing-rk1
+UBOOT_DIR=/usr/lib/linux-u-boot-vendor-turing-rk1
 # -----------------------------------------------------------------------------
 
 # partition device suffix: nvme0n1 -> p1, sda -> 1

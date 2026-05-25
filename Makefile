@@ -2,7 +2,7 @@
 
 HERE := $(CURDIR)
 BUILD_DIR ?= $(HERE)/build
-IMAGE_GLOB := $(BUILD_DIR)/output/images/Armbian_*_Turing-rk1_trixie_current_*.img
+IMAGE_GLOB := $(BUILD_DIR)/output/images/Armbian_*_Turing-rk1_trixie_*.img
 IMAGE := $(firstword $(wildcard $(IMAGE_GLOB)))
 
 help:
