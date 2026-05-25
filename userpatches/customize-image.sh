@@ -16,7 +16,7 @@ OVERLAY_SRC=/tmp/overlay
 
 TMPL="$OVERLAY_SRC/boot/user-data.tmpl"
 SECRETS="$OVERLAY_SRC/secrets.env"
-USER_DATA_OUT="$OVERLAY_SRC/boot/user-data"
+USER_DATA_OUT=/tmp/user-data.rendered
 
 RK1_USER="root"
 RK1_USER_PASSWORD_HASH=""
@@ -24,10 +24,13 @@ RK1_ROOT_PASSWORD_HASH=""
 RK1_USER_SSH_KEYS=""
 
 if [ -f "$SECRETS" ]; then
-  # shellcheck disable=SC1090
-  . "$SECRETS"
+  # /tmp/overlay is mounted read-only inside the chroot; copy out before sourcing
+  # so we can't be tricked into leaving the secret file behind.
+  install -m 0600 "$SECRETS" /tmp/secrets.env
+  # shellcheck disable=SC1091
+  . /tmp/secrets.env
+  shred -u /tmp/secrets.env 2>/dev/null || rm -f /tmp/secrets.env
   echo "customize-image.sh: loaded secrets.env (user=$RK1_USER)"
-  shred -u "$SECRETS" 2>/dev/null || rm -f "$SECRETS"
 else
   echo "customize-image.sh: no secrets.env; user-data will have placeholder values" >&2
 fi
@@ -59,11 +62,14 @@ with open(dst, "w") as f:
     f.write(body)
 PYEOF
 
-rm -f "$TMPL"
+rm -f "$TMPL" 2>/dev/null || :   # /tmp/overlay is read-only; ignore
 
 # --- Copy overlay boot/ tree into image /boot ---------------------------------
 if [ -d "$OVERLAY_SRC/boot" ]; then
   cp -av "$OVERLAY_SRC"/boot/. /boot/
+  rm -f /boot/user-data.tmpl
+  install -m 0644 "$USER_DATA_OUT" /boot/user-data
+  shred -u "$USER_DATA_OUT" 2>/dev/null || rm -f "$USER_DATA_OUT"
   chmod 0755 /boot/runcmd.ci.sh /boot/rootfs-to.sh
   # /boot is vfat on the shipped image (cloud-init extension forces BOOTFS_TYPE=fat),
   # so Unix mode bits on user-data are not preserved. Secrets live in user-data;
