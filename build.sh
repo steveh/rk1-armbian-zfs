@@ -6,7 +6,7 @@ set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="${BUILD_DIR:-$HERE/build}"
-ARMBIAN_BRANCH="${ARMBIAN_BRANCH:-v25.11}"
+ARMBIAN_BRANCH="${ARMBIAN_BRANCH:-v26.05}"
 
 if [ ! -d "$BUILD_DIR/.git" ]; then
   git clone --branch="$ARMBIAN_BRANCH" --depth=1 \
