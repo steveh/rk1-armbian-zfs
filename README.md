@@ -14,26 +14,38 @@ Inspired by https://github.com/j0ju/sbc-fw-alchemy (`docs/TuringPi2-Alpine/RK1-A
 
 ```
 build.sh                    # entry point; clones armbian/build and runs compile.sh
+secrets.env.example         # template for credentials; copy to secrets.env (gitignored)
 userpatches/
   config-rk1.conf           # all compile.sh switches
-  customize-image.sh        # runs in chroot at end of rootfs build; copies cloud-init files into image
-  cloud-init/
-    user-data               # cloud-init user-data: runs runcmd.ci.sh
-    meta-data
-    network-config          # DHCP on eth0
+  customize-image.sh        # runs in chroot; renders user-data from template + secrets.env
   overlay/
     boot/
-      runcmd.ci.sh          # first-boot script: apt update/install, then call rootfs-to.sh
+      user-data.tmpl        # cloud-init template with __PLACEHOLDERS__
+      meta-data
+      network-config        # DHCP on eth0
+      runcmd.ci.sh          # first-boot: apt update/install, then call rootfs-to.sh
       rootfs-to.sh          # repartition NVMe, copy rootfs, set up ZFS pool, write u-boot
 ```
 
 ## Usage
 
 ```
+cp secrets.env.example secrets.env
+$EDITOR secrets.env          # set user, hashed passwords, ssh keys
 ./build.sh
 ```
 
-Output image: `build/output/images/Armbian_*_Turing-rk1_trixie_current_*.img.xz`.
+`secrets.env` is gitignored. If omitted, the image still builds but boots with no preseeded user/ssh keys (effectively unusable without console access).
+
+Generate password hashes with:
+
+```
+mkpasswd -m sha-512                # from package `whois`
+# or
+openssl passwd -6
+```
+
+Output image: `build/output/images/Armbian_*_Turing-rk1_trixie_*.img.xz`.
 
 Flash to eMMC via the Turing Pi BMC, boot RK1, watch the serial console — cloud-init runs, migration completes, board reboots to NVMe.
 
@@ -50,9 +62,11 @@ Per https://docs.armbian.com/Developer-Guide_Build-Preparation/ :
 | # | Size       | Type        | FS    | Mount  |
 |---|------------|-------------|-------|--------|
 | - | 0–16 MiB   | reserved    | -     | U-Boot |
-| 1 | 384 MiB    | EFI System  | ext4  | /boot  |
+| 1 | 384 MiB    | EFI System  | vfat  | /boot  |
 | 2 | 16 GiB     | Linux       | ext4  | /      |
 | 3 | rest       | Linux       | zfs   | (pool `srv`, mounted /srv) |
+
+`/boot` is vfat to match the Armbian cloud-init extension's `BOOTFS_TYPE=fat` requirement (same filesystem on eMMC and NVMe avoids surprises). This means Unix permissions on `/boot/user-data` are not enforced; the hashed password and SSH keys it contains are protected only by being on a non-removable medium.
 
 Adjust sizes at the top of `userpatches/overlay/boot/rootfs-to.sh`.
 

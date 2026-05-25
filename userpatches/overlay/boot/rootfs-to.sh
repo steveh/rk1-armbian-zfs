@@ -1,6 +1,6 @@
 #!/bin/sh
 # Migrate the running eMMC rootfs to NVMe with layout:
-#   p1  ext4   /boot   (BOOT_SIZE)
+#   p1  vfat   /boot   (BOOT_SIZE)   — vfat to match cloud-init extension's BOOTFS_TYPE=fat
 #   p2  ext4   /       (ROOT_SIZE)
 #   p3  zfs    /srv    (pool name $SRV_POOL, dataset $SRV_POOL/srv)
 # Then write u-boot to the NVMe and exit. Caller reboots.
@@ -24,7 +24,7 @@ SRV_POOL=srv
 
 ROOT_DIR=/mnt
 ROOT_OPTS=relatime
-BOOT_OPTS="relatime,x-systemd.automount,x-systemd.idle-timeout=31"
+BOOT_OPTS="defaults,umask=0077,x-systemd.automount,x-systemd.idle-timeout=31"
 
 # u-boot package: must match BRANCH= used at build time
 UBOOT_DIR=/usr/lib/linux-u-boot-vendor-turing-rk1
@@ -63,14 +63,14 @@ if [ "$WIPE" = yes ]; then
   wipefs -af "${TARGET_DEV}${PART_SEP}"* 2>/dev/null || :
   wipefs -af "$TARGET_DEV"
   ( echo "label: gpt"
-    echo "${BOOT_OFFSET},${BOOT_SIZE},U"     # EFI System, /boot
+    echo "${BOOT_OFFSET},${BOOT_SIZE},U"     # EFI System, /boot (vfat)
     echo ",${ROOT_SIZE},L"                    # Linux, /
     echo ",,L"                                # Linux, /srv (zfs)
   ) | sfdisk "$TARGET_DEV"
   udevadm trigger
   udevadm settle
 
-  mkfs.ext4 -F "$BOOT_DEV"
+  mkfs.vfat -F32 -n BOOT "$BOOT_DEV"
   mkfs.ext4 -F "$ROOT_DEV"
 fi
 
@@ -120,7 +120,7 @@ zpool export "$SRV_POOL"
 # ---- /etc/fstab on target ---------------------------------------------------
 cat > "$ROOT_DIR/etc/fstab" <<EOF
 UUID=$ROOT_UUID / ext4 $ROOT_OPTS 0 1
-UUID=$BOOT_UUID /boot ext4 $BOOT_OPTS 0 2
+UUID=$BOOT_UUID /boot vfat $BOOT_OPTS 0 2
 tmpfs /tmp tmpfs mode=1777,nosuid 0 0
 EOF
 # /srv is managed by ZFS (mountpoint property), not fstab.

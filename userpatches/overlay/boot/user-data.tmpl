@@ -2,8 +2,26 @@
 
 hostname: rk1
 
+# Substituted from secrets.env at build time. If secrets.env was absent,
+# customize-image.sh leaves placeholders in place — the system will boot
+# with no preseeded login.
+
 users:
-  - default
+  - name: __RK1_USER__
+    groups: [sudo, adm, systemd-journal]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    hashed_passwd: '__RK1_USER_PASSWORD_HASH__'
+    ssh_authorized_keys:
+__RK1_USER_SSH_KEYS_YAML__
+
+chpasswd:
+  expire: false
+  users:
+    - {name: root, password: '__RK1_ROOT_PASSWORD_HASH__', type: hash}
+
+ssh_pwauth: true
 
 # Disable cloud-init's own package handling; we do it explicitly in runcmd.ci.sh.
 package_update: false
