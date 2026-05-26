@@ -89,7 +89,11 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
     zfsutils-linux \
-    vim
+    vim \
+    python3-venv \
+    python3-dev \
+    libpq-dev \
+    build-essential
 
 echo zfs > /etc/modules-load.d/zfs.conf
 
