@@ -79,8 +79,9 @@ fi
 # --- Copy overlay rootfs/ tree into image / ---------------------------------
 # Mirrors target paths under userpatches/overlay/rootfs/.
 if [ -d "$OVERLAY_SRC/rootfs" ]; then
+  # /etc/motd is a symlink to /var/run/motd on Debian; remove it so cp can replace it.
+  rm -f /etc/motd
   cp -av "$OVERLAY_SRC"/rootfs/. /
-  # Dynamic MOTD snippets must be executable.
   find /etc/update-motd.d -type f -name '*-rk1-*' -exec chmod 0755 {} +
 fi
 
