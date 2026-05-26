@@ -1,0 +1,20 @@
+#!/bin/sh
+# Dynamic MOTD for RK1: report which device we are booted from + reminder.
+root_src=$(findmnt -n -o SOURCE /)
+case "$root_src" in
+  /dev/nvme*)
+    where="NVMe ($root_src)"
+    note="Normal post-migration state."
+    ;;
+  /dev/mmcblk*)
+    where="eMMC ($root_src)"
+    note="First boot or rescue boot. Migration to NVMe will run automatically on first boot. See /usr/share/doc/rk1-firstboot/README.md."
+    ;;
+  *)
+    where="$root_src"
+    note=""
+    ;;
+esac
+printf '\n  Booted from: %s\n' "$where"
+[ -n "$note" ] && printf '  %s\n' "$note"
+printf '  Docs: /usr/share/doc/rk1-firstboot/README.md\n\n'

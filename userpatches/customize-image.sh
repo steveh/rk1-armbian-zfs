@@ -76,11 +76,20 @@ if [ -d "$OVERLAY_SRC/boot" ]; then
   # protect them by keeping the secret-bearing file out of git, not via filesystem ACLs.
 fi
 
-# --- ZFS userspace -------------------------------------------------------------
-# The `zfs` extension installs zfs-dkms; we add zfsutils-linux for the CLI.
+# --- Copy overlay rootfs/ tree into image / ---------------------------------
+# Mirrors target paths under userpatches/overlay/rootfs/.
+if [ -d "$OVERLAY_SRC/rootfs" ]; then
+  cp -av "$OVERLAY_SRC"/rootfs/. /
+  # Dynamic MOTD snippets must be executable.
+  find /etc/update-motd.d -type f -name '*-rk1-*' -exec chmod 0755 {} +
+fi
+
+# --- Extra packages -----------------------------------------------------------
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y --no-install-recommends zfsutils-linux
+apt-get install -y --no-install-recommends \
+    zfsutils-linux \
+    vim
 
 echo zfs > /etc/modules-load.d/zfs.conf
 

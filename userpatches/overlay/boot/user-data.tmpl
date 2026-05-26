@@ -15,6 +15,10 @@ users:
     hashed_passwd: '__RK1_USER_PASSWORD_HASH__'
     ssh_authorized_keys:
 __RK1_USER_SSH_KEYS_YAML__
+  - name: root
+    lock_passwd: false
+    ssh_authorized_keys:
+__RK1_USER_SSH_KEYS_YAML__
 
 chpasswd:
   expire: false
@@ -22,6 +26,7 @@ chpasswd:
     - {name: root, password: '__RK1_ROOT_PASSWORD_HASH__', type: hash}
 
 ssh_pwauth: true
+disable_root: false
 
 # Disable cloud-init's own package handling; we do it explicitly in runcmd.ci.sh.
 package_update: false
@@ -36,6 +41,8 @@ runcmd:
     : "decouple from systemd cgroup so we are not killed when cloud-final exits"
     echo $$ > /sys/fs/cgroup/cgroup.procs
     (
+      exec >/var/log/rk1-firstboot.log 2>&1
+      echo "rk1-firstboot: started at $(date -u +%FT%TZ)"
       while ! systemctl is-active --quiet cloud-final.service \
            && ! systemctl show -p SubState --value cloud-final.service | grep -q exited; do
         sleep 5
@@ -44,7 +51,8 @@ runcmd:
       while ! ping -c1 -W2 deb.debian.org >/dev/null 2>&1; do sleep 3; done
       for i in 1 2 3; do apt-get update && break; sleep $((i*3)); done
       if [ -r /boot/runcmd.ci.sh ]; then
-        sh -eu /boot/runcmd.ci.sh
+        sh -eux /boot/runcmd.ci.sh
       fi
+      echo "rk1-firstboot: finished at $(date -u +%FT%TZ)"
     ) &
 # vim: ft=yaml sw=2 ts=2 et

@@ -17,14 +17,18 @@ build.sh                    # entry point; clones armbian/build and runs compile
 secrets.env.example         # template for credentials; copy to secrets.env (gitignored)
 userpatches/
   config-rk1.conf           # all compile.sh switches
-  customize-image.sh        # runs in chroot; renders user-data from template + secrets.env
+  customize-image.sh        # runs in chroot; renders user-data, copies overlays, installs packages
   overlay/
-    boot/
+    boot/                   # copied verbatim into /boot on the built image
       user-data.tmpl        # cloud-init template with __PLACEHOLDERS__
       meta-data
       network-config        # DHCP on eth0
       runcmd.ci.sh          # first-boot: apt update/install, then call rootfs-to.sh
       rootfs-to.sh          # repartition NVMe, copy rootfs, set up ZFS pool, write u-boot
+    rootfs/                 # copied verbatim into / on the built image
+      etc/motd              # short static MOTD
+      etc/update-motd.d/20-rk1-bootinfo   # dynamic: reports current boot device
+      usr/share/doc/rk1-firstboot/README.md  # full firstboot / rescue notes
 ```
 
 ## Usage
